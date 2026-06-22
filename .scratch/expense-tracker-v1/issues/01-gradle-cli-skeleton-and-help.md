@@ -14,13 +14,21 @@ Status: ready-for-agent
 
 ## Acceptance criteria
 
-- [ ] 项目可以通过 Gradle 执行测试任务，且至少有一个通过的 JUnit 5 测试。
-- [ ] CLI 在无参数运行时输出帮助信息，并以成功或明确约定的退出码结束。
-- [ ] CLI 在运行 `help` 时输出可用命令说明。
-- [ ] 项目结构体现 `cli`、`domain`、`application`、`infrastructure` 的简单分层意图。
-- [ ] 未引入 Spring、Micronaut、Quarkus 等应用框架。
-- [ ] README 或帮助输出中不承诺尚未实现的行为已经可用。
+- [x] 项目可以通过 Gradle 执行测试任务，且至少有一个通过的 JUnit 5 测试。
+- [x] CLI 在无参数运行时输出帮助信息，并以成功或明确约定的退出码结束。
+- [x] CLI 在运行 `help` 时输出可用命令说明。
+- [x] 项目结构体现 `cli`、`domain`、`application`、`infrastructure` 的简单分层意图。
+- [x] 未引入 Spring、Micronaut、Quarkus 等应用框架。
+- [x] README 或帮助输出中不承诺尚未实现的行为已经可用。
 
 ## Blocked by
 
 None - can start immediately
+
+## Comments
+### 2026-06-22 实现记录
+
+- 建立 Gradle Java application 骨架，项目版本设为 `0.1.0`。
+- 增加 JUnit 5 CLI 帮助行为测试，覆盖无参数和 `help`。
+- 增加 `cli`、`domain`、`application`、`infrastructure` 包结构。
+- README 更新为当前只支持帮助命令，未承诺后续交易命令已经可用。

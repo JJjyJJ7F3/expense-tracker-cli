@@ -2,7 +2,23 @@
 
 一个用于练习 Java 的命令行记账工具。目标是构建一个本地运行的 CLI 应用，用来记录收入和支出、查看交易列表、删除录错交易，并生成周汇总和月汇总。
 
-当前项目处于 v1 规划阶段，尚未实现应用源码。已完成的规划文档包括：
+当前项目已建立 Gradle CLI 骨架，当前版本为 `0.1.0`。现阶段只实现帮助命令；交易新增、列表、删除、汇总和 CSV 存储仍在后续 issue 中实现。
+
+当前可用 CLI 参数：
+
+```text
+help
+```
+
+本地运行：
+
+```powershell
+gradle run
+gradle run --args="help"
+gradle test
+```
+
+已完成的规划文档包括：
 
 - [领域上下文](CONTEXT.md)
 - [v1 PRD](.scratch/expense-tracker-v1/PRD.md)
@@ -60,7 +76,7 @@ v1 每条交易固定包含以下字段：
 - 不引入 Spring、Micronaut、Quarkus 等应用框架。
 - 使用简单分层包结构：`cli`、`domain`、`application`、`infrastructure`。
 
-计划中的源码结构：
+源码结构：
 
 ```text
 src/main/java
