@@ -77,6 +77,15 @@ com.example.expensetracker
 └── infrastructure
 ```
 
+## 版本管理
+
+本项目使用 [Semantic Versioning](https://semver.org/) 管理版本，版本号格式为 `MAJOR.MINOR.PATCH`。
+
+- 不兼容的 CLI、CSV 数据格式、命令输出契约或公共行为变更提升 `MAJOR`。
+- 向后兼容的新增功能提升 `MINOR`。
+- 向后兼容的 bug 修复提升 `PATCH`。
+- 新增特性或修复 bug 时，必须同步评估并更新项目版本号。
+- 纯规划文档修改可以不改变版本号。
 ## 汇总规则
 
 - 周汇总使用 ISO 周：周一是一周开始，周日是一周结束。
@@ -124,5 +133,6 @@ v1 不包含：
 - 搜索和过滤参数
 - 命令历史
 - 交互式问答输入模式
+
 
 
