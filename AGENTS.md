@@ -43,6 +43,16 @@
 - 在没有明确需求前，不要引入与练习目标无关的框架或复杂架构。
 - 修改代码后，根据项目实际构建工具运行格式化、测试或构建命令；不要臆测命令，先读取项目配置。
 
+## 编辑策略
+
+由于当前 Codex Windows 环境中 `apply_patch` 多次触发沙箱辅助进程问题，本项目后续文件修改优先使用 PowerShell 执行定点、小范围编辑。
+
+- 修改前必须先读取目标文件并定位修改位置。
+- 使用 PowerShell 修改时，不做未经验证的大规模替换。
+- 修改后必须读取目标文件或用 `rg` 检查关键内容。
+- 修改后必须运行 `git diff -- .` 验证变更范围。
+- 如果后续 Codex 修复该 Windows 沙箱问题，可以恢复优先使用 `apply_patch`。
+
 ## 版本管理
 
 本项目使用 Semantic Versioning 管理版本，版本号格式为 `MAJOR.MINOR.PATCH`。
@@ -68,5 +78,4 @@
 ### Domain docs
 
 本仓库使用 single-context 布局：根目录 `CONTEXT.md`，架构决策记录在 `docs/adr/`。见 `docs/agents/domain.md`。
-
 
