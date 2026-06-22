@@ -6,10 +6,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class ExpenseTrackerCliTest {
+    @TempDir
+    Path tempDir;
+
     @Test
     void noArgsShowsHelpAndSucceeds() {
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
@@ -44,5 +54,200 @@ class ExpenseTrackerCliTest {
         assertTrue(output.contains("可用命令"));
         assertTrue(output.contains("help"));
         assertEquals("", stderr.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void addsExpenseAndListsItAcrossRuns() throws Exception {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult add = runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "42.5",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-06-22",
+                    "--note",
+                    "lunch");
+
+            assertEquals(0, add.exitCode());
+            assertTrue(add.stdout().contains("已新增交易"));
+            assertEquals("", add.stderr());
+            assertTrue(Files.exists(dataFile));
+            String csv = Files.readString(dataFile, StandardCharsets.UTF_8);
+            assertTrue(csv.startsWith("id,type,amount,category,date,note,createdAt"));
+            assertTrue(csv.contains(",expense,42.50,food,2026-06-22,lunch,"));
+
+            CommandResult list = runCli("list");
+
+            assertEquals(0, list.exitCode());
+            assertTrue(list.stdout().contains("expense"));
+            assertTrue(list.stdout().contains("42.50"));
+            assertTrue(list.stdout().contains("food"));
+            assertTrue(list.stdout().contains("2026-06-22"));
+            assertTrue(list.stdout().contains("lunch"));
+            assertEquals("", list.stderr());
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
+    void addsIncomeAndListsItAcrossRuns() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult add = runCli(
+                    "add",
+                    "--type",
+                    "income",
+                    "--amount",
+                    "8000",
+                    "--category",
+                    "salary",
+                    "--date",
+                    "2026-06-20",
+                    "--note",
+                    "monthly");
+
+            assertEquals(0, add.exitCode());
+            assertTrue(add.stdout().contains("已新增交易"));
+
+            CommandResult list = runCli("list");
+
+            assertEquals(0, list.exitCode());
+            assertTrue(list.stdout().contains("income"));
+            assertTrue(list.stdout().contains("8000.00"));
+            assertTrue(list.stdout().contains("salary"));
+            assertTrue(list.stdout().contains("2026-06-20"));
+            assertTrue(list.stdout().contains("monthly"));
+            assertEquals("", list.stderr());
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
+    void rejectsAmountWithMoreThanTwoDecimalPlaces() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult result = runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "42.500",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-06-22");
+
+            assertEquals(1, result.exitCode());
+            assertTrue(result.stderr().contains("金额最多只能有 2 位小数"));
+            assertTrue(Files.notExists(dataFile));
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidAddCommands")
+    void rejectsInvalidAddCommands(String[] args, String expectedMessage) {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult result = runCli(args);
+
+            assertEquals(1, result.exitCode());
+            assertTrue(result.stderr().contains(expectedMessage));
+            assertTrue(Files.notExists(dataFile));
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    private static Stream<Arguments> invalidAddCommands() {
+        return Stream.of(
+                Arguments.of(
+                        new String[] {
+                                "add",
+                                "--type",
+                                "transfer",
+                                "--amount",
+                                "42.50",
+                                "--category",
+                                "food",
+                                "--date",
+                                "2026-06-22"},
+                        "交易类型必须是 income 或 expense"),
+                Arguments.of(
+                        new String[] {
+                                "add",
+                                "--type",
+                                "expense",
+                                "--amount",
+                                "0",
+                                "--category",
+                                "food",
+                                "--date",
+                                "2026-06-22"},
+                        "金额必须大于 0"),
+                Arguments.of(
+                        new String[] {
+                                "add",
+                                "--type",
+                                "expense",
+                                "--amount",
+                                "42.50",
+                                "--category",
+                                "",
+                                "--date",
+                                "2026-06-22"},
+                        "缺少必填参数 --category"),
+                Arguments.of(
+                        new String[] {
+                                "add",
+                                "--type",
+                                "expense",
+                                "--amount",
+                                "42.50",
+                                "--category",
+                                "food",
+                                "--date",
+                                "2026-02-30"},
+                        "日期必须是合法的 YYYY-MM-DD"),
+                Arguments.of(
+                        new String[] {
+                                "add",
+                                "--type",
+                                "expense",
+                                "--category",
+                                "food",
+                                "--date",
+                                "2026-06-22"},
+                        "缺少必填参数 --amount"));
+    }
+
+    private static CommandResult runCli(String... args) {
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+        int exitCode = ExpenseTrackerCli.run(
+                args,
+                new PrintStream(stdout, true, StandardCharsets.UTF_8),
+                new PrintStream(stderr, true, StandardCharsets.UTF_8));
+
+        return new CommandResult(
+                exitCode,
+                stdout.toString(StandardCharsets.UTF_8),
+                stderr.toString(StandardCharsets.UTF_8));
+    }
+
+    private record CommandResult(int exitCode, String stdout, String stderr) {
     }
 }
