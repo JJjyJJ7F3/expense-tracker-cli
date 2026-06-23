@@ -1,6 +1,6 @@
 # 02: 新增交易并查看最近交易列表
 
-Status: ready-for-human
+Status: ready-for-agent
 
 ## Parent
 
