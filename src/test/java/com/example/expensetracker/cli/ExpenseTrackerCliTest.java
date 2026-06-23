@@ -132,6 +132,82 @@ class ExpenseTrackerCliTest {
     }
 
     @Test
+    void listsTransactionWithMultilineNoteWithoutBreakingRecordBoundary() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult add = runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "18.90",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-06-23",
+                    "--note",
+                    "first line\nsecond line");
+
+            assertEquals(0, add.exitCode());
+
+            CommandResult list = runCli("list");
+
+            assertEquals(0, list.exitCode());
+            assertEquals(2, list.stdout().lines().count());
+            assertTrue(list.stdout().contains("first line\\nsecond line"));
+            assertEquals("", list.stderr());
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
+    void roundTripsSpecialCharacterNoteAndKeepsFollowingTransactionsReadable() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult firstAdd = runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "31.20",
+                    "--category",
+                    "drink",
+                    "--date",
+                    "2026-06-23",
+                    "--note",
+                    "coffee, \"large\"\nwith milk");
+            CommandResult secondAdd = runCli(
+                    "add",
+                    "--type",
+                    "income",
+                    "--amount",
+                    "100.00",
+                    "--category",
+                    "gift",
+                    "--date",
+                    "2026-06-24",
+                    "--note",
+                    "birthday");
+
+            assertEquals(0, firstAdd.exitCode());
+            assertEquals(0, secondAdd.exitCode());
+
+            CommandResult list = runCli("list");
+
+            assertEquals(0, list.exitCode());
+            assertEquals(3, list.stdout().lines().count());
+            assertTrue(list.stdout().contains("coffee, \"large\"\\nwith milk"));
+            assertTrue(list.stdout().contains("birthday"));
+            assertEquals("", list.stderr());
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
     void rejectsAmountWithMoreThanTwoDecimalPlaces() {
         Path dataFile = tempDir.resolve("transactions.csv");
         System.setProperty("expense.tracker.dataFile", dataFile.toString());

@@ -87,7 +87,7 @@ public final class ExpenseTrackerCli {
                     transaction.amountText(),
                     transaction.category(),
                     transaction.date(),
-                    transaction.note(),
+                    displayText(transaction.note()),
                     transaction.createdAt());
         }
         return 0;
@@ -140,6 +140,12 @@ public final class ExpenseTrackerCli {
         stderr.println("错误: " + message);
         stderr.println("运行 `expense help` 查看可用命令。");
         return 1;
+    }
+
+    private static String displayText(String value) {
+        return value
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
     }
 
     private static void printHelp(PrintStream stdout) {
