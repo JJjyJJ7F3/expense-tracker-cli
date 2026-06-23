@@ -63,6 +63,10 @@
 - 向后兼容的新增功能提升 `MINOR`。
 - 向后兼容的问题修复提升 `PATCH`。
 - 版本变动必须和对应功能、修复或破坏性变更一起提交，除非该提交只是规划文档更新。
+- 只要代码版本号发生变化，完成提交后必须创建对应版本 tag，格式为 `vMAJOR.MINOR.PATCH`，例如 `v0.2.0`。
+- 版本 tag 必须使用注解 tag，tag message 使用中文，例如 `发布 0.2.0`。
+- 推送版本变动时，必须同时推送代码提交和对应版本 tag；推送后用 `git status --short --branch`、`git tag --list --sort=version:refname` 和 `git show --no-patch --decorate --oneline vMAJOR.MINOR.PATCH` 验证。
+- 如果一个版本由多批语义提交组成，版本 tag 应指向该版本最终应发布的提交，而不是只指向修改版本号的提交。
 - 修改版本规则时，需要同步更新 README、领域上下文或 ADR。
 
 ## Agent skills
@@ -78,4 +82,3 @@
 ### Domain docs
 
 本仓库使用 single-context 布局：根目录 `CONTEXT.md`，架构决策记录在 `docs/adr/`。见 `docs/agents/domain.md`。
-
