@@ -38,4 +38,21 @@ public final class TransactionService {
                 .sorted(Comparator.comparing(Transaction::createdAt).reversed())
                 .toList();
     }
+
+    public Transaction delete(String id) throws IOException {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("交易 ID 不能为空");
+        }
+
+        List<Transaction> transactions = repository.findAll();
+        Transaction deleted = transactions.stream()
+                .filter(transaction -> transaction.id().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("未找到交易: " + id));
+
+        repository.saveAll(transactions.stream()
+                .filter(transaction -> !transaction.id().equals(id))
+                .toList());
+        return deleted;
+    }
 }

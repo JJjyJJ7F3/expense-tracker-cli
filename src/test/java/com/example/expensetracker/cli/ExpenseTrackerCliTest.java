@@ -1,6 +1,7 @@
 package com.example.expensetracker.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -208,6 +209,94 @@ class ExpenseTrackerCliTest {
     }
 
     @Test
+    void deletesExistingTransactionAndRewritesCsv() throws Exception {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult firstAdd = runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "42.50",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-06-22",
+                    "--note",
+                    "lunch");
+            CommandResult secondAdd = runCli(
+                    "add",
+                    "--type",
+                    "income",
+                    "--amount",
+                    "8000",
+                    "--category",
+                    "salary",
+                    "--date",
+                    "2026-06-20",
+                    "--note",
+                    "monthly");
+
+            String deletedId = addedTransactionId(firstAdd);
+            String retainedId = addedTransactionId(secondAdd);
+            CommandResult deleted = runCli("delete", deletedId);
+
+            assertEquals(0, deleted.exitCode());
+            assertTrue(deleted.stdout().contains("已删除交易"));
+            assertTrue(deleted.stdout().contains(deletedId));
+            assertTrue(deleted.stdout().contains("expense"));
+            assertTrue(deleted.stdout().contains("42.50"));
+            assertEquals("", deleted.stderr());
+
+            CommandResult list = runCli("list");
+            String csv = Files.readString(dataFile, StandardCharsets.UTF_8);
+
+            assertEquals(0, list.exitCode());
+            assertFalse(list.stdout().contains(deletedId));
+            assertTrue(list.stdout().contains(retainedId));
+            assertFalse(csv.contains(deletedId));
+            assertTrue(csv.contains(retainedId));
+            assertFalse(csv.contains(",expense,42.50,food,2026-06-22,lunch,"));
+            assertTrue(csv.contains(",income,8000.00,salary,2026-06-20,monthly,"));
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
+    void deletingMissingTransactionFailsAndKeepsCsvUnchanged() throws Exception {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult add = runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "42.50",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-06-22",
+                    "--note",
+                    "lunch");
+            String before = Files.readString(dataFile, StandardCharsets.UTF_8);
+
+            CommandResult deleted = runCli("delete", "missing-id");
+            String after = Files.readString(dataFile, StandardCharsets.UTF_8);
+
+            assertEquals(1, deleted.exitCode());
+            assertEquals("", deleted.stdout());
+            assertTrue(deleted.stderr().contains("未找到交易: missing-id"));
+            assertEquals(before, after);
+            assertTrue(after.contains(addedTransactionId(add)));
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
     void rejectsAmountWithMoreThanTwoDecimalPlaces() {
         Path dataFile = tempDir.resolve("transactions.csv");
         System.setProperty("expense.tracker.dataFile", dataFile.toString());
@@ -322,6 +411,13 @@ class ExpenseTrackerCliTest {
                 exitCode,
                 stdout.toString(StandardCharsets.UTF_8),
                 stderr.toString(StandardCharsets.UTF_8));
+    }
+
+    private static String addedTransactionId(CommandResult result) {
+        assertEquals(0, result.exitCode());
+        String[] tokens = result.stdout().strip().split("\\s+");
+        assertTrue(tokens.length >= 2);
+        return tokens[1];
     }
 
     private record CommandResult(int exitCode, String stdout, String stderr) {

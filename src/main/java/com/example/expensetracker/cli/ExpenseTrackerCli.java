@@ -42,6 +42,7 @@ public final class ExpenseTrackerCli {
             return switch (args[0]) {
                 case "add" -> add(args, service, stdout);
                 case "list" -> list(service, stdout);
+                case "delete" -> delete(args, service, stdout);
                 default -> fail(stderr, "未知命令: " + args[0]);
             };
         } catch (IllegalArgumentException exception) {
@@ -90,6 +91,23 @@ public final class ExpenseTrackerCli {
                     displayText(transaction.note()),
                     transaction.createdAt());
         }
+        return 0;
+    }
+
+    private static int delete(String[] args, TransactionService service, PrintStream stdout) throws IOException {
+        if (args.length != 2 || args[1].isBlank()) {
+            throw new IllegalArgumentException("用法: delete <id>");
+        }
+
+        Transaction transaction = service.delete(args[1]);
+        stdout.printf(
+                "已删除交易: %s %s %s %s %s %s%n",
+                transaction.id(),
+                transaction.type().value(),
+                transaction.amountText(),
+                transaction.category(),
+                transaction.date(),
+                displayText(transaction.note()));
         return 0;
     }
 
@@ -154,6 +172,7 @@ public final class ExpenseTrackerCli {
         stdout.println("可用命令:");
         stdout.println("  add --type income|expense --amount 金额 --category 分类 --date YYYY-MM-DD [--note 备注]");
         stdout.println("  list    显示最近交易");
+        stdout.println("  delete <id>    删除指定交易");
         stdout.println("  help    显示帮助信息");
     }
 }

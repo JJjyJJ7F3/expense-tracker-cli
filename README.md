@@ -2,13 +2,14 @@
 
 一个用于练习 Java 的命令行记账工具。目标是构建一个本地运行的 CLI 应用，用来记录收入和支出、查看交易列表、删除录错交易，并生成周汇总和月汇总。
 
-当前项目已建立 Gradle CLI 骨架，当前版本为 `0.2.1`。现阶段已实现帮助命令、交易新增、交易列表、CSV 本地存储和 CSV 特殊字符备注处理；删除和汇总仍在后续 issue 中实现。
+当前项目已建立 Gradle CLI 骨架，当前版本为 `0.3.0`。现阶段已实现帮助命令、交易新增、交易列表、删除交易、CSV 本地存储和 CSV 特殊字符备注处理；汇总仍在后续 issue 中实现。
 
 当前可用 CLI 参数：
 
 ```text
 add --type income|expense --amount 金额 --category 分类 --date YYYY-MM-DD [--note 备注]
 list
+delete <id>
 help
 ```
 
@@ -19,6 +20,7 @@ gradle run
 gradle run --args="help"
 gradle run --args="add --type expense --amount 42.50 --category food --date 2026-06-22 --note lunch"
 gradle run --args="list"
+gradle run --args="delete <id>"
 gradle test
 ```
 
@@ -54,7 +56,7 @@ expense summary month --month 2026-06
 expense help
 ```
 
-当前已实现 `add`、`list` 和 `help`。
+当前已实现 `add`、`list`、`delete` 和 `help`。
 
 ## 数据模型
 
@@ -155,4 +157,3 @@ v1 不包含：
 - 搜索和过滤参数
 - 命令历史
 - 交互式问答输入模式
-
