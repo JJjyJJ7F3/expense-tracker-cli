@@ -700,6 +700,80 @@ class ExpenseTrackerCliTest {
         }
     }
 
+    @Test
+    void missingAddParameterShowsAddUsageAndFails() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult result = runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-06-22");
+
+            assertEquals(1, result.exitCode());
+            assertEquals("", result.stdout());
+            assertTrue(result.stderr().contains("缺少必填参数 --amount"));
+            assertTrue(result.stderr().contains("用法: add --type income|expense --amount 金额 --category 分类 --date YYYY-MM-DD [--note 备注]"));
+            assertTrue(Files.notExists(dataFile));
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
+    void missingSummaryParameterShowsSummaryUsageAndFails() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult result = runCli("summary", "week");
+
+            assertEquals(1, result.exitCode());
+            assertEquals("", result.stdout());
+            assertTrue(result.stderr().contains("缺少必填参数 --date"));
+            assertTrue(result.stderr().contains("用法: summary week --date YYYY-MM-DD 或 summary month --month YYYY-MM"));
+            assertTrue(Files.notExists(dataFile));
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
+    void missingMonthlySummaryParameterShowsSummaryUsageAndFails() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult result = runCli("summary", "month");
+
+            assertEquals(1, result.exitCode());
+            assertEquals("", result.stdout());
+            assertTrue(result.stderr().contains("缺少必填参数 --month"));
+            assertTrue(result.stderr().contains("用法: summary week --date YYYY-MM-DD 或 summary month --month YYYY-MM"));
+            assertTrue(Files.notExists(dataFile));
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
+    void missingDeleteIdShowsDeleteUsageAndFails() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult result = runCli("delete");
+
+            assertEquals(1, result.exitCode());
+            assertEquals("", result.stdout());
+            assertTrue(result.stderr().contains("用法: delete <id>"));
+            assertTrue(Files.notExists(dataFile));
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
     @ParameterizedTest
     @MethodSource("invalidAddCommands")
     void rejectsInvalidAddCommands(String[] args, String expectedMessage) {
@@ -709,7 +783,10 @@ class ExpenseTrackerCliTest {
             CommandResult result = runCli(args);
 
             assertEquals(1, result.exitCode());
+            assertEquals("", result.stdout());
             assertTrue(result.stderr().contains(expectedMessage));
+            assertTrue(result.stderr().contains("错误:"));
+            assertTrue(result.stderr().contains("运行 `expense help` 查看可用命令。"));
             assertTrue(Files.notExists(dataFile));
         } finally {
             System.clearProperty("expense.tracker.dataFile");
@@ -742,6 +819,30 @@ class ExpenseTrackerCliTest {
                                 "--date",
                                 "2026-06-22"},
                         "金额必须大于 0"),
+                Arguments.of(
+                        new String[] {
+                                "add",
+                                "--type",
+                                "expense",
+                                "--amount",
+                                "-1.00",
+                                "--category",
+                                "food",
+                                "--date",
+                                "2026-06-22"},
+                        "金额必须大于 0"),
+                Arguments.of(
+                        new String[] {
+                                "add",
+                                "--type",
+                                "expense",
+                                "--amount",
+                                "abc",
+                                "--category",
+                                "food",
+                                "--date",
+                                "2026-06-22"},
+                        "金额必须是有效数字"),
                 Arguments.of(
                         new String[] {
                                 "add",

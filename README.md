@@ -2,7 +2,7 @@
 
 一个用于练习 Java 的命令行记账工具。目标是构建一个本地运行的 CLI 应用，用来记录收入和支出、查看交易列表、删除录错交易，并生成周汇总和月汇总。
 
-当前项目已建立 Gradle CLI 骨架，当前版本为 `0.5.0`。现阶段已实现帮助命令、交易新增、交易列表、删除交易、ISO 周汇总、自然月汇总、CSV 本地存储和 CSV 特殊字符备注处理。
+当前项目已建立 Gradle CLI 骨架，当前版本为 `0.5.1`。现阶段已实现帮助命令、交易新增、交易列表、删除交易、ISO 周汇总、自然月汇总、CSV 本地存储、CSV 特殊字符备注处理，以及一致的 CLI 错误提示和退出码。
 
 当前可用 CLI 参数：
 
@@ -60,7 +60,7 @@ expense summary month --month 2026-06
 expense help
 ```
 
-当前已实现 `add`、`list`、`delete`、`summary week`、`summary month` 和 `help`。
+当前已实现 `add`、`list`、`delete`、`summary week`、`summary month`、`help` 和主要错误路径处理。
 
 ## 数据模型
 

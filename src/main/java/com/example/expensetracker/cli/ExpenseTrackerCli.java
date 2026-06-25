@@ -20,6 +20,12 @@ import com.example.expensetracker.domain.TransactionType;
 import com.example.expensetracker.infrastructure.CsvTransactionRepository;
 
 public final class ExpenseTrackerCli {
+    private static final String ADD_USAGE =
+            "用法: add --type income|expense --amount 金额 --category 分类 --date YYYY-MM-DD [--note 备注]";
+    private static final String DELETE_USAGE = "用法: delete <id>";
+    private static final String SUMMARY_USAGE =
+            "用法: summary week --date YYYY-MM-DD 或 summary month --month YYYY-MM";
+
     private ExpenseTrackerCli() {
     }
 
@@ -56,13 +62,18 @@ public final class ExpenseTrackerCli {
     }
 
     private static int add(String[] args, TransactionService service, PrintStream stdout) throws IOException {
-        Map<String, String> options = parseOptions(args);
-        Transaction transaction = service.add(new AddTransactionCommand(
-                TransactionType.parse(required(options, "type")),
-                parseAmount(required(options, "amount")),
-                required(options, "category"),
-                parseDate(required(options, "date")),
-                options.getOrDefault("note", "")));
+        Transaction transaction;
+        try {
+            Map<String, String> options = parseOptions(args);
+            transaction = service.add(new AddTransactionCommand(
+                    TransactionType.parse(required(options, "type")),
+                    parseAmount(required(options, "amount")),
+                    required(options, "category"),
+                    parseDate(required(options, "date")),
+                    options.getOrDefault("note", "")));
+        } catch (IllegalArgumentException exception) {
+            throw withUsage(exception, ADD_USAGE);
+        }
 
         stdout.printf(
                 "已新增交易: %s %s %s %s %s %s%n",
@@ -99,7 +110,7 @@ public final class ExpenseTrackerCli {
 
     private static int delete(String[] args, TransactionService service, PrintStream stdout) throws IOException {
         if (args.length != 2 || args[1].isBlank()) {
-            throw new IllegalArgumentException("用法: delete <id>");
+            throw new IllegalArgumentException(DELETE_USAGE);
         }
 
         Transaction transaction = service.delete(args[1]);
@@ -116,25 +127,33 @@ public final class ExpenseTrackerCli {
 
     private static int summary(String[] args, TransactionService service, PrintStream stdout) throws IOException {
         if (args.length < 2) {
-            throw new IllegalArgumentException("用法: summary week --date YYYY-MM-DD 或 summary month --month YYYY-MM");
+            throw new IllegalArgumentException(SUMMARY_USAGE);
         }
 
         return switch (args[1]) {
             case "week" -> summaryWeek(args, service, stdout);
             case "month" -> summaryMonth(args, service, stdout);
-            default -> throw new IllegalArgumentException("用法: summary week --date YYYY-MM-DD 或 summary month --month YYYY-MM");
+            default -> throw new IllegalArgumentException(SUMMARY_USAGE);
         };
     }
 
     private static int summaryWeek(String[] args, TransactionService service, PrintStream stdout) throws IOException {
-        Map<String, String> options = parseOptions(args, 2);
-        printSummary("周汇总", service.summarizeIsoWeek(parseDate(required(options, "date"))), stdout);
+        try {
+            Map<String, String> options = parseOptions(args, 2);
+            printSummary("周汇总", service.summarizeIsoWeek(parseDate(required(options, "date"))), stdout);
+        } catch (IllegalArgumentException exception) {
+            throw withUsage(exception, SUMMARY_USAGE);
+        }
         return 0;
     }
 
     private static int summaryMonth(String[] args, TransactionService service, PrintStream stdout) throws IOException {
-        Map<String, String> options = parseOptions(args, 2);
-        printSummary("月汇总", service.summarizeCalendarMonth(parseMonth(required(options, "month"))), stdout);
+        try {
+            Map<String, String> options = parseOptions(args, 2);
+            printSummary("月汇总", service.summarizeCalendarMonth(parseMonth(required(options, "month"))), stdout);
+        } catch (IllegalArgumentException exception) {
+            throw withUsage(exception, SUMMARY_USAGE);
+        }
         return 0;
     }
 
@@ -200,6 +219,10 @@ public final class ExpenseTrackerCli {
         }
     }
 
+    private static IllegalArgumentException withUsage(IllegalArgumentException exception, String usage) {
+        return new IllegalArgumentException(exception.getMessage() + System.lineSeparator() + usage, exception);
+    }
+
     private static Path dataFile() {
         String configuredPath = System.getProperty("expense.tracker.dataFile");
         if (configuredPath != null && !configuredPath.isBlank()) {
@@ -224,9 +247,9 @@ public final class ExpenseTrackerCli {
         stdout.println("Expense Tracker CLI");
         stdout.println();
         stdout.println("可用命令:");
-        stdout.println("  add --type income|expense --amount 金额 --category 分类 --date YYYY-MM-DD [--note 备注]");
+        stdout.println("  " + ADD_USAGE.substring("用法: ".length()));
         stdout.println("  list    显示最近交易");
-        stdout.println("  delete <id>    删除指定交易");
+        stdout.println("  " + DELETE_USAGE.substring("用法: ".length()) + "    删除指定交易");
         stdout.println("  summary week --date YYYY-MM-DD    显示 ISO 周汇总");
         stdout.println("  summary month --month YYYY-MM    显示自然月汇总");
         stdout.println("  help    显示帮助信息");
