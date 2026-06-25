@@ -495,6 +495,188 @@ class ExpenseTrackerCliTest {
     }
 
     @Test
+    void summarizesCalendarMonthFromCurrentCsvTransactions() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            assertEquals(0, runCli(
+                    "add",
+                    "--type",
+                    "income",
+                    "--amount",
+                    "3000.00",
+                    "--category",
+                    "salary",
+                    "--date",
+                    "2026-06-01").exitCode());
+            assertEquals(0, runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "42.50",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-06-15").exitCode());
+            assertEquals(0, runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "7.50",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-06-30").exitCode());
+            assertEquals(0, runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "99.00",
+                    "--category",
+                    "travel",
+                    "--date",
+                    "2026-07-01").exitCode());
+
+            CommandResult summary = runCli("summary", "month", "--month", "2026-06");
+
+            assertEquals(0, summary.exitCode());
+            assertTrue(summary.stdout().contains("月汇总: 2026-06-01 至 2026-06-30"));
+            assertTrue(summary.stdout().contains("总收入: 3000.00"));
+            assertTrue(summary.stdout().contains("总支出: 50.00"));
+            assertTrue(summary.stdout().contains("净收入: 2950.00"));
+            assertTrue(summary.stdout().contains("food: 50.00"));
+            assertFalse(summary.stdout().contains("99.00"));
+            assertEquals("", summary.stderr());
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
+    void summarizesSelectedCalendarMonthAndIncludesMonthBoundaryDates() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            assertEquals(0, runCli(
+                    "add",
+                    "--type",
+                    "income",
+                    "--amount",
+                    "500.00",
+                    "--category",
+                    "bonus",
+                    "--date",
+                    "2026-02-01").exitCode());
+            assertEquals(0, runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "20.00",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-02-28").exitCode());
+            assertEquals(0, runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "11.00",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-01-31").exitCode());
+            assertEquals(0, runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "12.00",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-03-01").exitCode());
+
+            CommandResult summary = runCli("summary", "month", "--month", "2026-02");
+
+            assertEquals(0, summary.exitCode());
+            assertTrue(summary.stdout().contains("月汇总: 2026-02-01 至 2026-02-28"));
+            assertTrue(summary.stdout().contains("总收入: 500.00"));
+            assertTrue(summary.stdout().contains("总支出: 20.00"));
+            assertTrue(summary.stdout().contains("净收入: 480.00"));
+            assertTrue(summary.stdout().contains("food: 20.00"));
+            assertFalse(summary.stdout().contains("11.00"));
+            assertFalse(summary.stdout().contains("12.00"));
+            assertEquals("", summary.stderr());
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
+    void monthlySummaryExcludesDeletedTransaction() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult deleted = runCli(
+                    "add",
+                    "--type",
+                    "expense",
+                    "--amount",
+                    "42.00",
+                    "--category",
+                    "food",
+                    "--date",
+                    "2026-06-15");
+            assertEquals(0, runCli(
+                    "add",
+                    "--type",
+                    "income",
+                    "--amount",
+                    "100.00",
+                    "--category",
+                    "gift",
+                    "--date",
+                    "2026-06-20").exitCode());
+            assertEquals(0, runCli("delete", addedTransactionId(deleted)).exitCode());
+
+            CommandResult summary = runCli("summary", "month", "--month", "2026-06");
+
+            assertEquals(0, summary.exitCode());
+            assertTrue(summary.stdout().contains("月汇总: 2026-06-01 至 2026-06-30"));
+            assertTrue(summary.stdout().contains("总收入: 100.00"));
+            assertTrue(summary.stdout().contains("总支出: 0.00"));
+            assertTrue(summary.stdout().contains("净收入: 100.00"));
+            assertTrue(summary.stdout().contains("支出分类小计:"));
+            assertTrue(summary.stdout().contains("无"));
+            assertFalse(summary.stdout().contains("42.00"));
+            assertEquals("", summary.stderr());
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
+    void monthlySummaryRejectsInvalidMonth() {
+        Path dataFile = tempDir.resolve("transactions.csv");
+        System.setProperty("expense.tracker.dataFile", dataFile.toString());
+        try {
+            CommandResult result = runCli("summary", "month", "--month", "2026-13");
+
+            assertEquals(1, result.exitCode());
+            assertEquals("", result.stdout());
+            assertTrue(result.stderr().contains("年月必须是合法的 YYYY-MM"));
+            assertTrue(Files.notExists(dataFile));
+        } finally {
+            System.clearProperty("expense.tracker.dataFile");
+        }
+    }
+
+    @Test
     void rejectsAmountWithMoreThanTwoDecimalPlaces() {
         Path dataFile = tempDir.resolve("transactions.csv");
         System.setProperty("expense.tracker.dataFile", dataFile.toString());

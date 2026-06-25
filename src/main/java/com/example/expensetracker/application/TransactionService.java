@@ -3,6 +3,7 @@ package com.example.expensetracker.application;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -60,5 +61,9 @@ public final class TransactionService {
 
     public TransactionSummary summarizeIsoWeek(LocalDate dateInWeek) throws IOException {
         return TransactionSummary.forIsoWeek(repository.findAll(), dateInWeek);
+    }
+
+    public TransactionSummary summarizeCalendarMonth(YearMonth month) throws IOException {
+        return TransactionSummary.forCalendarMonth(repository.findAll(), month);
     }
 }

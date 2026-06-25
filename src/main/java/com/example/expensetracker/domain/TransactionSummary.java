@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -35,6 +36,13 @@ public record TransactionSummary(
         }
         LocalDate startDate = dateInWeek.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         return forRange(transactions, startDate, startDate.plusDays(6));
+    }
+
+    public static TransactionSummary forCalendarMonth(List<Transaction> transactions, YearMonth month) {
+        if (month == null) {
+            throw new IllegalArgumentException("月汇总年月不能为空");
+        }
+        return forRange(transactions, month.atDay(1), month.atEndOfMonth());
     }
 
     public BigDecimal netIncome() {

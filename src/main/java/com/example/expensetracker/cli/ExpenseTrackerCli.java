@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -114,14 +115,31 @@ public final class ExpenseTrackerCli {
     }
 
     private static int summary(String[] args, TransactionService service, PrintStream stdout) throws IOException {
-        if (args.length < 2 || !"week".equals(args[1])) {
-            throw new IllegalArgumentException("用法: summary week --date YYYY-MM-DD");
+        if (args.length < 2) {
+            throw new IllegalArgumentException("用法: summary week --date YYYY-MM-DD 或 summary month --month YYYY-MM");
         }
 
-        Map<String, String> options = parseOptions(args, 2);
-        TransactionSummary summary = service.summarizeIsoWeek(parseDate(required(options, "date")));
+        return switch (args[1]) {
+            case "week" -> summaryWeek(args, service, stdout);
+            case "month" -> summaryMonth(args, service, stdout);
+            default -> throw new IllegalArgumentException("用法: summary week --date YYYY-MM-DD 或 summary month --month YYYY-MM");
+        };
+    }
 
-        stdout.printf("周汇总: %s 至 %s%n", summary.startDate(), summary.endDate());
+    private static int summaryWeek(String[] args, TransactionService service, PrintStream stdout) throws IOException {
+        Map<String, String> options = parseOptions(args, 2);
+        printSummary("周汇总", service.summarizeIsoWeek(parseDate(required(options, "date"))), stdout);
+        return 0;
+    }
+
+    private static int summaryMonth(String[] args, TransactionService service, PrintStream stdout) throws IOException {
+        Map<String, String> options = parseOptions(args, 2);
+        printSummary("月汇总", service.summarizeCalendarMonth(parseMonth(required(options, "month"))), stdout);
+        return 0;
+    }
+
+    private static void printSummary(String title, TransactionSummary summary, PrintStream stdout) {
+        stdout.printf("%s: %s 至 %s%n", title, summary.startDate(), summary.endDate());
         stdout.printf("总收入: %s%n", summary.totalIncomeText());
         stdout.printf("总支出: %s%n", summary.totalExpenseText());
         stdout.printf("净收入: %s%n", summary.netIncomeText());
@@ -133,7 +151,6 @@ public final class ExpenseTrackerCli {
                 stdout.printf("  %s: %s%n", entry.getKey(), TransactionSummary.amountText(entry.getValue()));
             }
         }
-        return 0;
     }
 
     private static Map<String, String> parseOptions(String[] args) {
@@ -175,6 +192,14 @@ public final class ExpenseTrackerCli {
         }
     }
 
+    private static YearMonth parseMonth(String rawMonth) {
+        try {
+            return YearMonth.parse(rawMonth);
+        } catch (DateTimeParseException exception) {
+            throw new IllegalArgumentException("年月必须是合法的 YYYY-MM", exception);
+        }
+    }
+
     private static Path dataFile() {
         String configuredPath = System.getProperty("expense.tracker.dataFile");
         if (configuredPath != null && !configuredPath.isBlank()) {
@@ -203,6 +228,7 @@ public final class ExpenseTrackerCli {
         stdout.println("  list    显示最近交易");
         stdout.println("  delete <id>    删除指定交易");
         stdout.println("  summary week --date YYYY-MM-DD    显示 ISO 周汇总");
+        stdout.println("  summary month --month YYYY-MM    显示自然月汇总");
         stdout.println("  help    显示帮助信息");
     }
 }
