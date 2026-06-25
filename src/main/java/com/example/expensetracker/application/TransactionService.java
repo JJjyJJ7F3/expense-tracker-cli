@@ -2,12 +2,14 @@ package com.example.expensetracker.application;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
 import com.example.expensetracker.domain.Transaction;
+import com.example.expensetracker.domain.TransactionSummary;
 
 public final class TransactionService {
     private final TransactionRepository repository;
@@ -54,5 +56,9 @@ public final class TransactionService {
                 .filter(transaction -> !transaction.id().equals(id))
                 .toList());
         return deleted;
+    }
+
+    public TransactionSummary summarizeIsoWeek(LocalDate dateInWeek) throws IOException {
+        return TransactionSummary.forIsoWeek(repository.findAll(), dateInWeek);
     }
 }

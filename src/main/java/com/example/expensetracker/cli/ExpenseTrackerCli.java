@@ -14,6 +14,7 @@ import java.util.Map;
 import com.example.expensetracker.application.AddTransactionCommand;
 import com.example.expensetracker.application.TransactionService;
 import com.example.expensetracker.domain.Transaction;
+import com.example.expensetracker.domain.TransactionSummary;
 import com.example.expensetracker.domain.TransactionType;
 import com.example.expensetracker.infrastructure.CsvTransactionRepository;
 
@@ -43,6 +44,7 @@ public final class ExpenseTrackerCli {
                 case "add" -> add(args, service, stdout);
                 case "list" -> list(service, stdout);
                 case "delete" -> delete(args, service, stdout);
+                case "summary" -> summary(args, service, stdout);
                 default -> fail(stderr, "未知命令: " + args[0]);
             };
         } catch (IllegalArgumentException exception) {
@@ -111,9 +113,36 @@ public final class ExpenseTrackerCli {
         return 0;
     }
 
+    private static int summary(String[] args, TransactionService service, PrintStream stdout) throws IOException {
+        if (args.length < 2 || !"week".equals(args[1])) {
+            throw new IllegalArgumentException("用法: summary week --date YYYY-MM-DD");
+        }
+
+        Map<String, String> options = parseOptions(args, 2);
+        TransactionSummary summary = service.summarizeIsoWeek(parseDate(required(options, "date")));
+
+        stdout.printf("周汇总: %s 至 %s%n", summary.startDate(), summary.endDate());
+        stdout.printf("总收入: %s%n", summary.totalIncomeText());
+        stdout.printf("总支出: %s%n", summary.totalExpenseText());
+        stdout.printf("净收入: %s%n", summary.netIncomeText());
+        stdout.println("支出分类小计:");
+        if (summary.expenseByCategory().isEmpty()) {
+            stdout.println("  无");
+        } else {
+            for (Map.Entry<String, BigDecimal> entry : summary.expenseByCategory().entrySet()) {
+                stdout.printf("  %s: %s%n", entry.getKey(), TransactionSummary.amountText(entry.getValue()));
+            }
+        }
+        return 0;
+    }
+
     private static Map<String, String> parseOptions(String[] args) {
+        return parseOptions(args, 1);
+    }
+
+    private static Map<String, String> parseOptions(String[] args, int startIndex) {
         Map<String, String> options = new LinkedHashMap<>();
-        for (int i = 1; i < args.length; i++) {
+        for (int i = startIndex; i < args.length; i++) {
             String option = args[i];
             if (!option.startsWith("--")) {
                 throw new IllegalArgumentException("参数格式错误: " + option);
@@ -173,6 +202,7 @@ public final class ExpenseTrackerCli {
         stdout.println("  add --type income|expense --amount 金额 --category 分类 --date YYYY-MM-DD [--note 备注]");
         stdout.println("  list    显示最近交易");
         stdout.println("  delete <id>    删除指定交易");
+        stdout.println("  summary week --date YYYY-MM-DD    显示 ISO 周汇总");
         stdout.println("  help    显示帮助信息");
     }
 }
